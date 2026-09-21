@@ -1,0 +1,94 @@
+# Commit gate for nopCommerce 3.90 (.NET Framework 4.8 / C# / ASP.NET MVC 5).
+#
+# Tailored from the mad-teams template:
+#   - Python (ruff) block removed — no Python in this repo.
+#   - JS/TS (eslint) block removed — no npm, no eslint config; all JS here is vendored.
+#   - check-toml removed (no TOML); check-xml ADDED — 496 tracked
+#     .csproj/.config/.xml/.resx files make this the highest-value hook here.
+#   - Vendored trees excluded globally: src/packages/ is COMMITTED (503 DLLs,
+#     46 files over 1 MB), and Scripts//Content/ hold third-party jQuery/Kendo.
+#     Without the exclude, adding a NuGet package would be blocked and vendored
+#     JS would be reformatted on every touch.
+#   - ubs runs LAST so the cheap checks fail first.
+#
+# Install:        pre-commit install
+# Run manually:   pre-commit run --all-files
+# Skip one hook:  SKIP=ubs git commit ...
+# Emergency:      git commit --no-verify
+
+# Third-party / generated trees. Nothing below should ever be reformatted by a hook.
+exclude: |
+  (?x)^(
+    src/packages/|
+    src/Presentation/Nop\.Web/Scripts/|
+    src/Presentation/Nop\.Web/Content/|
+    src/Presentation/Nop\.Web/Administration/Scripts/|
+    src/Presentation/Nop\.Web/Administration/Content/|
+    src/Presentation/Nop\.Web/Themes/[^/]+/Content/|
+    src/Presentation/Nop\.Web/App_Data/|
+    .*/(bin|obj)/
+  )
+
+repos:
+  # ── Hygiene ── stack-independent.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # Visual Studio and NuGet REWRITE the project/config files on every save —
+      # they ship without a trailing newline and with trailing whitespace in the
+      # boilerplate comment. Fixing that here just starts a ping-pong with the
+      # IDE and puts 2 unrelated lines in every PR that touches a project file,
+      # so the two fixers skip VS-managed formats.
+      # ...and `br` rewrites .beads/metadata.json + issues.jsonl on every
+      # backlog change, also without a trailing newline. Same ping-pong, same
+      # fix: the tool that owns the file owns its formatting.
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+        exclude: (\.(csproj|sln|config|resx|sitemap)$|^\.beads/)
+      - id: end-of-file-fixer
+        exclude: (\.(csproj|sln|config|resx|sitemap)$|^\.beads/)
+      - id: check-json
+      - id: check-yaml
+      - id: check-merge-conflict
+
+      # The one that earns its keep here: a malformed .csproj or web.config
+      # breaks the build for everyone. identify only tags *.xml as XML, so
+      # widen it to the MSBuild/ASP.NET family explicitly.
+      - id: check-xml
+        files: \.(xml|csproj|config|props|targets|resx|sitemap)$
+
+      - id: check-added-large-files
+        # 1 MB for source. src/packages/ is excluded globally above, so this
+        # will not fire when a teammate restores or adds a NuGet package.
+        args: [--maxkb=1024]
+
+      - id: no-commit-to-branch
+        # Upstream's long-lived branches only. TEAM_BASE_BRANCH
+        # (mad/retarget-net48) is deliberately NOT listed — direct commits to it
+        # stay possible without an escape hatch. Teammate PR discipline rests on
+        # the dev loop's worktree convention, not on this hook.
+        args:
+          - --branch=main
+          - --branch=develop
+
+  # ── Bug scan ── runs last, after the cheap checks have passed. ubs is
+  #    installed per developer but this config is shared through git, so the
+  #    entry skips cleanly rather than blocking a teammate's commit.
+  #
+  #    KNOWN: ubs 5.4.4 does not work under Git Bash on Windows.
+  #      1. `--staged` always aborts with "scan path is outside git root".
+  #         ubs normalizes the scan path through `pwd -P` (MSYS form,
+  #         /c/Users/...) and string-compares it to `git rev-parse
+  #         --show-toplevel` (Windows form, C:/Users/...). They can never match.
+  #      2. Language detection finds nothing even in a directory of pure .cs.
+  #    Both are upstream bugs with no config-side workaround, so the entry
+  #    skips on MSYS/MinGW/Cygwin. Teammates on Linux/macOS get the real scan.
+  #    Re-test after upgrading ubs and drop the uname guard if it's fixed.
+  - repo: local
+    hooks:
+      - id: ubs
+        name: Ultimate Bug Scanner (staged)
+        entry: bash -c 'command -v ubs >/dev/null 2>&1 || { echo "ubs not on PATH - skipping bug scan" >&2; exit 0; }; case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) echo "ubs --staged is broken under Git Bash on Windows - skipping bug scan" >&2; exit 0;; esac; ubs --staged; rc=$?; if [ "$rc" -eq 3 ]; then exit 0; fi; exit "$rc"' --
+        language: system
+        pass_filenames: false # ubs discovers the staged set itself
+        always_run: true

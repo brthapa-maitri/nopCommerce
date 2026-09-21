@@ -164,3 +164,5 @@ src/Presentation/Nop.Web/App_Data/InstalledPlugins.txt
 src/Presentation/Nop.Web/App_Data/Settings.txt
 src/Presentation/Nop.Web/App_Data/browscap.crawlersonly.xml
 src/Presentation/Nop.Web/Administration/db_backups/*.bak
+# mad-teams: per-developer env (Jira token, chat webhook) — never commit
+.claude/settings.local.json
