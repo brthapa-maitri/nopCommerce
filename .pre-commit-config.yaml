@@ -42,11 +42,19 @@ repos:
       # ...and `br` rewrites .beads/metadata.json + issues.jsonl on every
       # backlog change, also without a trailing newline. Same ping-pong, same
       # fix: the tool that owns the file owns its formatting.
+      # ...and the same applies to the inherited nopCommerce source itself.
+      # These hooks rewrite the WHOLE file, not just the lines you changed, and
+      # this 3.90 codebase carries pre-existing trailing whitespace throughout.
+      # Result: touching one method put unrelated whitespace-only lines in the
+      # diff, which two independent PR reviews flagged as noise harming
+      # reviewability (PR #2 DependencyRegistrar.cs, PR #3 CustomerService.cs).
+      # So the fixers skip everything under src/ — the upstream tree we did not
+      # author — and still apply to docs, config and anything new we add.
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
-        exclude: (\.(csproj|sln|config|resx|sitemap)$|^\.beads/)
+        exclude: (\.(csproj|sln|config|resx|sitemap)$|^\.beads/|^src/)
       - id: end-of-file-fixer
-        exclude: (\.(csproj|sln|config|resx|sitemap)$|^\.beads/)
+        exclude: (\.(csproj|sln|config|resx|sitemap)$|^\.beads/|^src/)
       - id: check-json
       - id: check-yaml
       - id: check-merge-conflict
