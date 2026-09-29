@@ -1105,6 +1105,21 @@ label, label + * {
 .block .list a:hover {
 	color: #4ab2f1;
 }
+/* Keyboard focus style — #0056b3 on the #fff block background is ~7:1,
+   comfortably above the WCAG AA minimums (4.5:1 text / 3:1 non-text UI). */
+.block .list a:focus {
+	outline: 3px solid #0056b3;
+	outline-offset: 2px;
+	color: #0056b3;
+}
+.block .list a:focus-visible {
+	outline: 3px solid #0056b3;
+	outline-offset: 2px;
+	color: #0056b3;
+}
+.block .list a[aria-current="page"] {
+	font-weight: bold;
+}
 .block a.product-picture {
 	display: none;
 }
