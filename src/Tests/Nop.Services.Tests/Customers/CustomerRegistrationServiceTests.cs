@@ -173,7 +173,7 @@ namespace Nop.Services.Tests.Customers
             _customerService = new CustomerService(new NopNullCache(), _customerRepo, _customerPasswordRepo, _customerRoleRepo,
                 _genericAttributeRepo, _orderRepo, _forumPostRepo, _forumTopicRepo,
                 null, null, null, null, null,
-                _genericAttributeService, null, null, _eventPublisher, _customerSettings, null);
+                _genericAttributeService, null, null, _eventPublisher, _customerSettings, null, null);
             _customerRegistrationService = new CustomerRegistrationService(_customerService,
                 _encryptionService, _newsLetterSubscriptionService, _localizationService,
                 _storeService, _rewardPointService, _workContext, _genericAttributeService,
@@ -181,7 +181,7 @@ namespace Nop.Services.Tests.Customers
         }
 
         //[Test]
-        //public void Can_register_a_customer() 
+        //public void Can_register_a_customer()
         //{
         //    var registrationRequest = CreateCustomerRegistrationRequest();
         //    var result = _customerService.RegisterCustomer(registrationRequest);
@@ -190,7 +190,7 @@ namespace Nop.Services.Tests.Customers
         //}
 
         //[Test]
-        //public void Can_not_have_duplicate_usernames_or_emails() 
+        //public void Can_not_have_duplicate_usernames_or_emails()
         //{
         //    var registrationRequest = CreateUserRegistrationRequest();
         //    registrationRequest.Username = "a@b.com";
