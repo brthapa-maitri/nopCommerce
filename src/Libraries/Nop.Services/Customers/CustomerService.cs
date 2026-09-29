@@ -19,6 +19,7 @@ using Nop.Core.Domain.Shipping;
 using Nop.Data;
 using Nop.Services.Common;
 using Nop.Services.Events;
+using Nop.Services.Helpers;
 
 namespace Nop.Services.Customers
 {
@@ -71,6 +72,7 @@ namespace Nop.Services.Customers
         private readonly IEventPublisher _eventPublisher;
         private readonly CustomerSettings _customerSettings;
         private readonly CommonSettings _commonSettings;
+        private readonly IDateTimeHelper _dateTimeHelper;
 
         #endregion
 
@@ -92,9 +94,10 @@ namespace Nop.Services.Customers
             IGenericAttributeService genericAttributeService,
             IDataProvider dataProvider,
             IDbContext dbContext,
-            IEventPublisher eventPublisher, 
+            IEventPublisher eventPublisher,
             CustomerSettings customerSettings,
-            CommonSettings commonSettings)
+            CommonSettings commonSettings,
+            IDateTimeHelper dateTimeHelper)
         {
             this._cacheManager = cacheManager;
             this._customerRepository = customerRepository;
@@ -115,6 +118,7 @@ namespace Nop.Services.Customers
             this._eventPublisher = eventPublisher;
             this._customerSettings = customerSettings;
             this._commonSettings = commonSettings;
+            this._dateTimeHelper = dateTimeHelper;
         }
 
         #endregion
@@ -198,7 +202,7 @@ namespace Nop.Services.Customers
                 string dateOfBirthStr = monthOfBirth.ToString("00", CultureInfo.InvariantCulture) + "-" + dayOfBirth.ToString("00", CultureInfo.InvariantCulture);
                 //EndsWith is not supported by SQL Server Compact
                 //so let's use the following workaround http://social.msdn.microsoft.com/Forums/is/sqlce/thread/0f810be1-2132-4c59-b9ae-8f7013c0cc00
-                
+
                 //we also cannot use Length function in SQL Server Compact (not supported in this context)
                 //z.Attribute.Value.Length - dateOfBirthStr.Length = 5
                 //dateOfBirthStr.Length = 5
@@ -215,7 +219,7 @@ namespace Nop.Services.Customers
                 string dateOfBirthStr = dayOfBirth.ToString("00", CultureInfo.InvariantCulture);
                 //EndsWith is not supported by SQL Server Compact
                 //so let's use the following workaround http://social.msdn.microsoft.com/Forums/is/sqlce/thread/0f810be1-2132-4c59-b9ae-8f7013c0cc00
-                
+
                 //we also cannot use Length function in SQL Server Compact (not supported in this context)
                 //z.Attribute.Value.Length - dateOfBirthStr.Length = 8
                 //dateOfBirthStr.Length = 2
@@ -284,7 +288,7 @@ namespace Nop.Services.Customers
                     query.Where(c => c.ShoppingCartItems.Any(x => x.ShoppingCartTypeId == sctId)) :
                     query.Where(c => c.ShoppingCartItems.Any());
             }
-            
+
             query = query.OrderByDescending(c => c.CreatedOnUtc);
 
             var customers = new PagedList<Customer>(query, pageIndex, pageSize);
@@ -307,7 +311,7 @@ namespace Nop.Services.Customers
             query = query.Where(c => !c.Deleted);
             if (customerRoleIds != null && customerRoleIds.Length > 0)
                 query = query.Where(c => c.CustomerRoles.Select(cr => cr.Id).Intersect(customerRoleIds).Any());
-            
+
             query = query.OrderByDescending(c => c.LastActivityDateUtc);
             var customers = new PagedList<Customer>(query, pageIndex, pageSize);
             return customers;
@@ -350,7 +354,7 @@ namespace Nop.Services.Customers
         {
             if (customerId == 0)
                 return null;
-            
+
             return _customerRepository.GetById(customerId);
         }
 
@@ -378,7 +382,7 @@ namespace Nop.Services.Customers
             }
             return sortedCustomers;
         }
-        
+
         /// <summary>
         /// Gets a customer by GUID
         /// </summary>
@@ -450,7 +454,7 @@ namespace Nop.Services.Customers
             var customer = query.FirstOrDefault();
             return customer;
         }
-        
+
         /// <summary>
         /// Insert a guest customer
         /// </summary>
@@ -475,7 +479,7 @@ namespace Nop.Services.Customers
 
             return customer;
         }
-        
+
         /// <summary>
         /// Insert a customer
         /// </summary>
@@ -490,7 +494,7 @@ namespace Nop.Services.Customers
             //event notification
             _eventPublisher.EntityInserted(customer);
         }
-        
+
         /// <summary>
         /// Updates the customer
         /// </summary>
@@ -523,7 +527,7 @@ namespace Nop.Services.Customers
         {
             if (customer == null)
                 throw new ArgumentNullException();
-            
+
             //clear entered coupon codes
             if (clearCouponCodes)
             {
@@ -556,10 +560,10 @@ namespace Nop.Services.Customers
             {
                 _genericAttributeService.SaveAttribute<string>(customer, SystemCustomerAttributeNames.SelectedPaymentMethod, null, storeId);
             }
-            
+
             UpdateCustomer(customer);
         }
-        
+
         /// <summary>
         /// Delete guest customer records
         /// </summary>
@@ -571,8 +575,8 @@ namespace Nop.Services.Customers
         {
             if (_commonSettings.UseStoredProceduresIfSupported && _dataProvider.StoredProceduredSupported)
             {
-                //stored procedures are enabled and supported by the database. 
-                //It's much faster than the LINQ implementation below 
+                //stored procedures are enabled and supported by the database.
+                //It's much faster than the LINQ implementation below
 
                 #region Stored procedure
 
@@ -665,7 +669,7 @@ namespace Nop.Services.Customers
                         from pvr in c_pvr.DefaultIfEmpty()
                         where !c_pvr.Any()
                         select c;
-                //no forum posts 
+                //no forum posts
                 query = from c in query
                         join fp in _forumPostRepository.Table on c.Id equals fp.CustomerId into c_fp
                         from fp in c_fp.DefaultIfEmpty()
@@ -714,8 +718,28 @@ namespace Nop.Services.Customers
             }
         }
 
+        /// <summary>
+        /// Gets the customer's last login date/time, converted to the store's timezone
+        /// </summary>
+        /// <param name="customer">Customer</param>
+        /// <returns>The last login date/time in the store's timezone; null if the customer has never logged in</returns>
+        public virtual DateTime? GetCustomerLastLoginDate(Customer customer)
+        {
+            if (customer == null)
+                throw new ArgumentNullException("customer");
+
+            //never logged in
+            if (!customer.LastLoginDateUtc.HasValue)
+                return null;
+
+            //LastLoginDateUtc is stored in UTC; convert to the store's (not the
+            //currently browsing customer's) timezone
+            return _dateTimeHelper.ConvertToUserTime(customer.LastLoginDateUtc.Value,
+                TimeZoneInfo.Utc, _dateTimeHelper.DefaultStoreTimeZone);
+        }
+
         #endregion
-        
+
         #region Customer roles
 
         /// <summary>
@@ -791,7 +815,7 @@ namespace Nop.Services.Customers
                 return customerRoles;
             });
         }
-        
+
         /// <summary>
         /// Inserts a customer role
         /// </summary>
@@ -837,7 +861,7 @@ namespace Nop.Services.Customers
         /// <param name="passwordFormat">Password format; pass null to load all records</param>
         /// <param name="passwordsToReturn">Number of returning passwords; pass null to load all records</param>
         /// <returns>List of customer passwords</returns>
-        public virtual IList<CustomerPassword> GetCustomerPasswords(int? customerId = null, 
+        public virtual IList<CustomerPassword> GetCustomerPasswords(int? customerId = null,
             PasswordFormat? passwordFormat = null, int? passwordsToReturn = null)
         {
             var query = _customerPasswordRepository.Table;

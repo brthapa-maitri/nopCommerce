@@ -75,7 +75,7 @@ namespace Nop.Services.Customers
         /// <param name="customerIds">Customer identifiers</param>
         /// <returns>Customers</returns>
         IList<Customer> GetCustomersByIds(int[] customerIds);
-        
+
         /// <summary>
         /// Gets a customer by GUID
         /// </summary>
@@ -89,7 +89,7 @@ namespace Nop.Services.Customers
         /// <param name="email">Email</param>
         /// <returns>Customer</returns>
         Customer GetCustomerByEmail(string email);
-        
+
         /// <summary>
         /// Get customer by system role
         /// </summary>
@@ -121,7 +121,7 @@ namespace Nop.Services.Customers
         /// </summary>
         /// <param name="customer">Customer</param>
         void UpdateCustomer(Customer customer);
-        
+
         /// <summary>
         /// Reset data required for checkout
         /// </summary>
@@ -145,6 +145,13 @@ namespace Nop.Services.Customers
         /// <param name="onlyWithoutShoppingCart">A value indicating whether to delete customers only without shopping cart</param>
         /// <returns>Number of deleted customers</returns>
         int DeleteGuestCustomers(DateTime? createdFromUtc, DateTime? createdToUtc, bool onlyWithoutShoppingCart);
+
+        /// <summary>
+        /// Gets the customer's last login date/time, converted to the store's timezone
+        /// </summary>
+        /// <param name="customer">Customer</param>
+        /// <returns>The last login date/time in the store's timezone; null if the customer has never logged in</returns>
+        DateTime? GetCustomerLastLoginDate(Customer customer);
 
         #endregion
 
