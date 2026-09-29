@@ -121,6 +121,7 @@
     <Compile Include="Catalog\RoundingHelperTests.cs" />
     <Compile Include="Catalog\TierPriceExtensionTests.cs" />
     <Compile Include="Catalog\PriceCalculationServiceTests.cs" />
+    <Compile Include="Catalog\ProductPopularityServiceTests.cs" />
     <Compile Include="Catalog\ProductAttributeParserAndFormatterTests.cs" />
     <Compile Include="Catalog\PriceFormatterTests.cs" />
     <Compile Include="Configuration\ConfigFileSettingService.cs" />
