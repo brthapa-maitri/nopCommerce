@@ -45,14 +45,20 @@ namespace Nop.Services.Tests.Customers
         public void Can_get_last_login_date_should_convert_to_store_timezone_when_customer_has_logged_in()
         {
             var lastLoginUtc = new DateTime(2026, 1, 15, 8, 0, 0, DateTimeKind.Utc);
-            var storeTimeZone = TimeZoneInfo.Utc;
+            //a distinct, deterministic offset (not TimeZoneInfo.Utc) so the
+            //assertion below can tell the source (UTC) and destination
+            //(store timezone) arguments apart
+            var storeTimeZone = TimeZoneInfo.CreateCustomTimeZone(
+                "UTC+02:00 (test)", TimeSpan.FromHours(2), "UTC+02:00 (test)", "UTC+02:00 (test)");
             var expected = lastLoginUtc.AddHours(2);
 
             _dateTimeHelper.Expect(x => x.DefaultStoreTimeZone).Return(storeTimeZone);
+            //asserts the AC directly: conversion source must be UTC and the
+            //destination must be the store's timezone, not e.g. CurrentTimeZone
             _dateTimeHelper.Expect(x => x.ConvertToUserTime(
-                Arg<DateTime>.Is.Anything,
-                Arg<TimeZoneInfo>.Is.Anything,
-                Arg<TimeZoneInfo>.Is.Anything)).Return(expected);
+                Arg<DateTime>.Is.Equal(lastLoginUtc),
+                Arg<TimeZoneInfo>.Is.Equal(TimeZoneInfo.Utc),
+                Arg<TimeZoneInfo>.Is.Equal(storeTimeZone))).Return(expected);
 
             var customer = new Customer
             {
