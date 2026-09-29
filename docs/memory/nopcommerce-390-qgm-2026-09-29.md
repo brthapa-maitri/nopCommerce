@@ -1,9 +1,10 @@
 # Task: nopcommerce-390-qgm (Story 1.1: Expose customer last-login timestamp)
 
-**Status:** IN_PROGRESS
-**Last Updated:** 2026-09-29T00:00:00Z (session start)
+**Status:** IN_PROGRESS (PR open, awaiting review)
+**Last Updated:** 2026-09-29T00:00:00Z (PR opened)
 **Bead / Branch:** nopcommerce-390-qgm / feat/AT-264-customer-last-login
 **Jira:** AT-264
+**PR:** https://github.com/brthapa-maitri/nopCommerce/pull/3 (base: mad/retarget-net48)
 
 ## Objective
 Add an `ICustomerService` method that returns a customer's last-login time
@@ -32,13 +33,15 @@ About to implement:
   `IDateTimeHelper` arg there since that test doesn't exercise the new method).
 
 ## Pending Tasks
-- [ ] Edit `src/Libraries/Nop.Services/Customers/ICustomerService.cs`
-- [ ] Edit `src/Libraries/Nop.Services/Customers/CustomerService.cs`
-- [ ] Update `src/Tests/Nop.Services.Tests/Customers/CustomerRegistrationServiceTests.cs`
+- [x] Edit `src/Libraries/Nop.Services/Customers/ICustomerService.cs`
+- [x] Edit `src/Libraries/Nop.Services/Customers/CustomerService.cs`
+- [x] Update `src/Tests/Nop.Services.Tests/Customers/CustomerRegistrationServiceTests.cs`
       ctor call site (add dateTimeHelper arg)
-- [ ] Create `src/Tests/Nop.Services.Tests/Customers/CustomerServiceTests.cs`
-- [ ] Commit, push, open PR (base `mad/retarget-net48`), note unbuilt/unverified
-- [ ] Notify lead with [PR READY]
+- [x] Create `src/Tests/Nop.Services.Tests/Customers/CustomerServiceTests.cs`
+- [x] Added new test file to `Nop.Services.Tests.csproj` (old-style csproj,
+      explicit `<Compile Include>` list — easy to miss)
+- [x] Commit, push, open PR (base `mad/retarget-net48`), noted unbuilt/unverified
+- [ ] Await lead review; merge + close bead (steps 8-11) once approved
 
 ## Files Modified
 | File | Change | Description |
@@ -57,5 +60,13 @@ About to implement:
   (`sync_bead.py claim nopcommerce-390-qgm --assignee backend-1`) — got
   CLAIMED (exit 0), AT-264 transitioned to In Progress.
 - This is on the critical path for nopcommerce-390-4gs (frontend, Story 1.2).
-- Cannot build (no MSBuild/dotnet on this machine) — PR will say explicitly
+- Cannot build (no MSBuild/dotnet on this machine) — PR says explicitly
   code is unbuilt/unverified locally, correct by inspection only.
+- `gh pr create` defaults to the `upstream` remote (`nopSolutions/nopCommerce`,
+  default branch `develop`) instead of `origin` (`brthapa-maitri/nopCommerce`
+  fork) even though `origin` is the tracking remote for the pushed branch —
+  it failed with "No commits between nopSolutions:mad/retarget-net48 and
+  brthapa-maitri:...". Fix: pass `--repo brthapa-maitri/nopCommerce`
+  explicitly on `gh pr create` (and presumably other `gh pr`/`gh repo`
+  commands) in this checkout. Worth a note for other teammates on this repo.
+- PR opened: https://github.com/brthapa-maitri/nopCommerce/pull/3
