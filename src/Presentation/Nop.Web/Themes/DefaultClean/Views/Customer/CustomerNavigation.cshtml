@@ -1,0 +1,35 @@
+@model CustomerNavigationModel
+@using Nop.Web.Models.Customer;
+<div class="block block-account-navigation">
+    <div class="title">
+        <strong>@T("Account.Navigation")</strong>
+    </div>
+    <div class="listbox">
+        <ul class="list" aria-label="@T("Account.Navigation")">
+            @Html.Widget("account_navigation_before")
+            @foreach (var item in Model.CustomerNavigationItems)
+            {
+                var isSelected = Model.SelectedTab == item.Tab;
+                var ariaCurrent = isSelected ? " aria-current=\"page\"" : string.Empty;
+                <li class="@item.ItemClass">
+                    <a href="@Url.RouteUrl(item.RouteName)" class="@(isSelected ? "active" : "inactive")"@Html.Raw(ariaCurrent)>@(item.Title)</a>
+                </li>
+            }
+            @Html.Widget("account_navigation_after")
+        </ul>
+    </div>
+</div>
+<script>
+    $(document).ready(function () {
+        // Native <a> elements already activate on Enter; add Space-key
+        // activation so the account menu behaves like a standard menu
+        // for keyboard users (WCAG 2.1.1 Keyboard).
+        $('.block-account-navigation .list a').on('keydown', function (e) {
+            var key = e.key || '';
+            if (key === ' ' || key === 'Spacebar' || e.keyCode === 32) {
+                e.preventDefault();
+                this.click();
+            }
+        });
+    });
+</script>
