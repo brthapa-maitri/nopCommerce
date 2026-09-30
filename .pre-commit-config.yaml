@@ -83,20 +83,31 @@ repos:
   #    installed per developer but this config is shared through git, so the
   #    entry skips cleanly rather than blocking a teammate's commit.
   #
-  #    KNOWN: ubs 5.4.4 does not work under Git Bash on Windows.
-  #      1. `--staged` always aborts with "scan path is outside git root".
-  #         ubs normalizes the scan path through `pwd -P` (MSYS form,
-  #         /c/Users/...) and string-compares it to `git rev-parse
-  #         --show-toplevel` (Windows form, C:/Users/...). They can never match.
-  #      2. Language detection finds nothing even in a directory of pure .cs.
-  #    Both are upstream bugs with no config-side workaround, so the entry
-  #    skips on MSYS/MinGW/Cygwin. Teammates on Linux/macOS get the real scan.
-  #    Re-test after upgrading ubs and drop the uname guard if it's fixed.
+  #    We do NOT use `ubs --staged`. It aborts with "scan path is outside git
+  #    root" under Git Bash: ubs derives the scan path via `pwd -P` (MSYS form,
+  #    /c/Users/...) and string-compares it to `git rev-parse --show-toplevel`
+  #    (Windows form, C:/Users/...), which can never match. Still unfixed on
+  #    upstream main (5.4.16); `cygpath` appears nowhere in that repo and no
+  #    flag or env var avoids it. Upstream's own generated hook doesn't use
+  #    --staged either — it runs a full `ubs . --fail-on-warning`.
+  #
+  #    So we compute the staged list ourselves and pass --files=, which is
+  #    documented, works on every platform, and survives ubs upgrades.
+  #
+  #    Flags: --no-dotnet skips the build/test/format/NuGet phases (there is no
+  #    dotnet CLI here, and without it ubs exits 2 as a partial run); --ci
+  #    stabilizes timestamps and disables the auto-update check.
+  #    Exit codes: 0 pass, 1 findings, 2 tooling error, 3 nothing scanned.
+  #
+  #    SPEED: ~47s for two .cs files on this machine. If that becomes a reason
+  #    to reach for --no-verify, move this hook to pre-push instead.
+  #    Requires ubs >= 5.4.7 — earlier builds ship without modules/contract.json
+  #    and silently scan nothing on EVERY OS (fixed upstream in 5.4.7).
   - repo: local
     hooks:
       - id: ubs
-        name: Ultimate Bug Scanner (staged)
-        entry: bash -c 'command -v ubs >/dev/null 2>&1 || { echo "ubs not on PATH - skipping bug scan" >&2; exit 0; }; case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) echo "ubs --staged is broken under Git Bash on Windows - skipping bug scan" >&2; exit 0;; esac; ubs --staged; rc=$?; if [ "$rc" -eq 3 ]; then exit 0; fi; exit "$rc"' --
+        name: Ultimate Bug Scanner (staged C#)
+        entry: bash -c 'command -v ubs >/dev/null 2>&1 || { echo "ubs not on PATH - skipping bug scan" >&2; exit 0; }; FILES=$(git diff --cached --name-only --diff-filter=ACMR -z | tr "\0" "\n" | grep -E "\.(cs|csx)$" | grep -v "^src/packages/" | paste -sd, -); [ -z "$FILES" ] && exit 0; ubs --files="$FILES" --no-dotnet --ci .; rc=$?; [ "$rc" -eq 3 ] && exit 0; [ "$rc" -eq 2 ] && echo "ubs hit a tooling error, not a code problem - SKIP=ubs git commit to bypass" >&2; exit "$rc"' --
         language: system
-        pass_filenames: false # ubs discovers the staged set itself
+        pass_filenames: false # the entry computes the staged set itself
         always_run: true
